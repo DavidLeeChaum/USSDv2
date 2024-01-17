@@ -29,11 +29,11 @@ contract USSD is
     address public constant WBTC = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c;
     address public constant WETH = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
 
-    address public constant STABLE_ORACLE = 0x55d398326f99059fF775485246999027B3197955;
-    address public constant STABLEDAI_ORACLE = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3;
-    address public constant WBGL_ORACLE = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c;
-    address public constant WBTC_ORACLE = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c;
-    address public constant WETH_ORACLE = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
+    address private STABLE_ORACLE;
+    address private STABLEDAI_ORACLE;
+    address private WBGL_ORACLE;
+    address private WBTC_ORACLE;
+    address private WETH_ORACLE;
 
     address private owner;
 
@@ -54,26 +54,50 @@ contract USSD is
         _;
     }
 
+    /**
+        @dev connect staking contract (deployed after this contract)
+     */
     function connectStaking(address _staking) public onlyOwner {
-        require(stakingContract == address(0));
+        require(stakingContract == address(0)); // can be triggered only once
         stakingContract = _staking;
     }
 
+    /**
+        @dev connect insurance contract (deployed after this contract)
+     */
     function connectInsurance(address _insurance) public onlyOwner {
-        require(insuranceContract == address(0));
+        require(insuranceContract == address(0)); // can be triggered only once
         insuranceContract = _insurance;
     }
 
+    /**
+        @dev single-time if stable (USDT) goes bad, switch to DAI
+     */
     function switchToDAI() public onlyOwner {
         require(!switchedToWETH && !switchedToDAI);
         switchedToDAI = true;
     }
 
+    /**
+        @dev single-time if all collateral pegs fail, switch to WETH only
+     */
     function switchToWETH() public onlyOwner {
         require(!switchedToWETH);
         switchedToWETH = true;
     }
 
+    /**
+        @dev single-time connect oracles (or these addresses could be hardcoded consts)
+     */
+    function setOracles(address _stableOracle, address _DAIOracle, address _WBGLOracle, address _WBTCOracle, address _WETHOracle) public onlyOwner {
+        require(STABLE_ORACLE == address(0)); // can be triggered only once
+        STABLE_ORACLE = _stableOracle;
+        STABLEDAI_ORACLE = _DAIOracle;
+        WBGL_ORACLE = _WBGLOracle;
+        WBTC_ORACLE = _WBTCOracle;
+        WETH_ORACLE = _WETHOracle;
+    }
+    
     /**
         @dev change owner address or completely lock owner methods
      */
@@ -104,7 +128,10 @@ contract USSD is
                              MINT LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// Mint by staking or insurance contracts as a rewards
+    /**
+        @dev Mint by staking or insurance contracts as rewards
+             could be called only by staking or insurance contracts
+     */
     function mintRewards(
         uint256 stableCoinAmount,
         address to
@@ -131,17 +158,17 @@ contract USSD is
         if (switchedToWETH) {
             require(token == WETH, "weth only");
         } else {
-            address stable = address(STABLE);
-            if (!switchedToDAI) {
-                stable = address(STABLEDAI);
+            address stable = STABLE;
+            if (switchedToDAI) {
+                stable = STABLEDAI;
             }
             uint256 balance = ERC20(stable).balanceOf(address(this)) / 1e12; // USSD has 6 decimals
 
-            if (btcsummer() || balance < (this.totalSupply() * 5 / 100)) {
+            if (btcsummer() || balance <= (this.totalSupply() * 5 / 100)) {
                 // mint only for stables is allowed
                 require(token == stable, "STABLE only");
-            } else if (balance >= (this.totalSupply() * 15 / 100)) {
-                // WBSC or WETH only
+            } else if (balance > (this.totalSupply() * 15 / 100)) {
+                // WBTC or WETH only
                 require(token == WETH || token == WBTC, "WBTCorWETH");
             } else {
                 require(token == WETH || token == WBTC || token == stable, "unknown token");
@@ -160,7 +187,9 @@ contract USSD is
         emit Mint(msg.sender, to, token, tokenAmount, stableCoinAmount);
     }
 
-
+    /**
+        @dev try to evaluate stage of BTC 4-year halving cycle
+    */
     function btcsummer() internal view returns (bool) {
         // (822721 + (block.timestamp - 1703420845) / 600) % 210000
         // range 0-209999
@@ -172,7 +201,9 @@ contract USSD is
         return false;
     }
 
-    /// @dev Return how much STABLECOIN does user receive for AMOUNT of asset
+    /**
+        @dev Return how much STABLECOIN does user receive for AMOUNT of asset
+    */
     function calculateMint(address _token, uint256 _amount) public view returns (uint256) {
         // all collateral component tokens have 18 decimals, so divide by 1e36 = 1e18 price fraction and 1e18 token fraction
         if (_token == WETH) {
@@ -187,7 +218,9 @@ contract USSD is
         revert("unknown_token");
     }
 
-    /// Redeem specific AMOUNT OF COLLATERAL by burning token
+    /**
+        @dev Redeem specific AMOUNT OF COLLATERAL by burning token
+    */
     function redeem(
         uint256 _amount,
         address to
@@ -196,23 +229,24 @@ contract USSD is
 
         uint256 cf = collateralFactor();
 
-        if (cf < 900000000000000000000) {
+        if (cf < 900000000000000000) {
             IUSSDInsurance(insuranceContract).insuranceClaim();
             // insurance claim can change collateral factor, so we recalculate it for this redeem
             cf = collateralFactor();
         }
 
         uint256 weight = 1e18;
-        if (cf < 950000000000000000000) {
+        if (cf < 950000000000000000) {
             // penalize redeems when undercollateralized to avoid bank runs and redeem competition
-            weight = cf * 950000000000000000000 / 1e18;
+            weight = cf * 950000000000000000 / 1e18;
         }
 
+        // USD valuation (1e18 based)
         uint256 valuationToGive = _amount * 1e12 * weight / 1e18;
 
         _burn(msg.sender, _amount);
 
-        //to save one var, emit event now
+        // to save one var, emit event now
         emit Redeem(msg.sender, to, _amount, valuationToGive);
 
         if (!switchedToDAI) {
@@ -254,7 +288,9 @@ contract USSD is
         }
     }
 
-    // return valuation to track if redeem is completely covered by this collateral component
+    /**
+        @dev Return valuation to track if redeem is completely covered by this collateral component
+    */
     function calculateRedeem(address _token, uint256 _valuation) public view returns (uint256 amount, uint256 valuation) {
         uint256 totalVal = 0;
         if (_token == WETH) {
@@ -284,6 +320,10 @@ contract USSD is
                          ACCOUNTING LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /**
+        @dev Estimate own collateral ratio based on collateral component prices
+        @return 1e18-based collateral ratio (1e18 = 1.0, >1.0 overcollateralized, <1.0 undercollateralized)
+    */
     function collateralFactor() public view override returns (uint256) {
         if (totalSupply() == 0) {  
             return 0;  
@@ -298,10 +338,10 @@ contract USSD is
                 totalAssetsUSD += IERC20(STABLEDAI).balanceOf(address(this)) * IStableOracle(STABLEDAI_ORACLE).getPriceUSD() / 1e18;
             }
 
-            totalAssetsUSD += IERC20(WBTC).balanceOf(address(this)) * 1e6 * IStableOracle(WBTC_ORACLE).getPriceUSD() / 1e18;
+            totalAssetsUSD += IERC20(WBTC).balanceOf(address(this)) * IStableOracle(WBTC_ORACLE).getPriceUSD() / 1e18;
         }
 
-        totalAssetsUSD += IERC20(WETH).balanceOf(address(this)) * 1e6 * IStableOracle(WETH_ORACLE).getPriceUSD() / 1e18;
+        totalAssetsUSD += IERC20(WETH).balanceOf(address(this)) * IStableOracle(WETH_ORACLE).getPriceUSD() / 1e18;
 
         return totalAssetsUSD * 1e6 / totalSupply();
     }

@@ -6,7 +6,7 @@ import "./UniswapV3StaticOracle.sol";
 import "../interfaces/IStableOracle.sol";
 import "../interfaces/IStaticOracle.sol";
 
-contract StableOracleWBGL is IStableOracle {
+contract StableOracleWBGLV2 is IStableOracle {
     IStaticOracle public immutable staticOracleUniV3;
     IStableOracle public immutable ethOracle;
 
@@ -26,7 +26,7 @@ contract StableOracleWBGL is IStableOracle {
                 0x55d398326f99059fF775485246999027B3197955, // USDT (base token)
                 0x2bA64EFB7A4Ec8983E22A49c81fa216AC33f383A, // WBGL (quote token)
                 pools, // WBGL/WETH pool uni v3
-                3600 // period
+                1 // period
             );
 
         //uint256 WETHPriceUSD = ethOracle.getPriceUSD();
