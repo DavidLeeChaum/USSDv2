@@ -116,19 +116,19 @@ contract stUSSD is USSDRewards {
 
     function totalAssets() public view returns (uint256) {
         // staked token is 1e18 decimals (USSD is 1e6 stablecoin), so multiply to match for prettier balance numbers
-        return USSDToken.balanceOf(address(this)) * 1e12;
+        return USSDToken.balanceOf(address(this));
     }
 
     function convertToShares(uint256 assets) public view virtual returns (uint256) {
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
 
-        return supply == 0 ? assets : assets.mulDivDown(supply, totalAssets());
+        return supply == 0 ? assets * 1e12 : assets.mulDivDown(supply, totalAssets());
     }
 
     function convertToAssets(uint256 shares) public view virtual returns (uint256) {
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
 
-        return supply == 0 ? shares : shares.mulDivDown(totalAssets(), supply);
+        return supply == 0 ? shares / 1e12 : shares.mulDivDown(totalAssets(), supply);
     }
 
     function previewDeposit(uint256 assets) public view virtual returns (uint256) {
@@ -138,13 +138,13 @@ contract stUSSD is USSDRewards {
     function previewMint(uint256 shares) public view virtual returns (uint256) {
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
 
-        return supply == 0 ? shares : shares.mulDivUp(totalAssets(), supply);
+        return supply == 0 ? shares / 1e12 : shares.mulDivUp(totalAssets(), supply);
     }
 
     function previewWithdraw(uint256 assets) public view virtual returns (uint256) {
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
 
-        return supply == 0 ? assets : assets.mulDivUp(supply, totalAssets());
+        return supply == 0 ? assets * 1e12 : assets.mulDivUp(supply, totalAssets());
     }
 
     function previewRedeem(uint256 shares) public view virtual returns (uint256) {

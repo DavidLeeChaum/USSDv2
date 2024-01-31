@@ -54,3 +54,6 @@ addresses provided by ganache when forking a network.
 
 Tests modify blockchain state and are not intended to be run multiple time on a single network fork (due to finite balances
 on provided addresses and altering network blocks/timestamp).
+
+If errors are encountered similar to 'missing trie node', please separate tests into several runs, as
+probably ganache starts to bug out after sequential test tuns.
