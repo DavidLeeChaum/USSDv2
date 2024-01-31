@@ -8,13 +8,11 @@ import "../interfaces/IStaticOracle.sol";
 
 contract StableOracleWBGLV2 is IStableOracle {
     IStaticOracle public immutable staticOracleUniV3;
-    IStableOracle public immutable ethOracle;
 
-    constructor(address _wethoracle) {
+    constructor() {
         staticOracleUniV3 = IStaticOracle(
-            0xB210CE856631EeEB767eFa666EC7C1C57738d438 // Mean finance static oracle on mainnet
+            0xB210CE856631EeEB767eFa666EC7C1C57738d438 // Mean finance static oracle
         );
-        ethOracle = IStableOracle(_wethoracle);
     }
 
     function getPriceUSD() external view override returns (uint256) {
@@ -28,10 +26,6 @@ contract StableOracleWBGLV2 is IStableOracle {
                 pools, // WBGL/WETH pool uni v3
                 1 // period
             );
-
-        //uint256 WETHPriceUSD = ethOracle.getPriceUSD();
-
-        //return (WETHPriceUSD * 1e18) / WBGLWETHPrice;
 
         return 1e36 / USDTWBGLPrice;
     }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20 } from "solmate/src/tokens/ERC20.sol";
+import { SafeTransferLib } from "solmate/src/utils/SafeTransferLib.sol";
 
 import "./interfaces/IStableOracle.sol";
 import "./interfaces/IUSSDInsurance.sol";
@@ -15,7 +15,8 @@ contract USSD is
     IUSSD,
     ERC20
 {
-    using SafeERC20 for IERC20;
+    //using SafeERC20 for IERC20;
+    using SafeTransferLib for ERC20;
 
     address public stakingContract;
     address public insuranceContract;
@@ -38,12 +39,8 @@ contract USSD is
     address private owner;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {
+    constructor(string memory _name, string memory _symbol, uint8 _decimals) ERC20(_name, _symbol, _decimals) {
         owner = msg.sender;
-    }
-
-    function decimals() public pure override returns (uint8) {
-        return 6;
     }
 
     /**
@@ -135,8 +132,7 @@ contract USSD is
     function mintRewards(
         uint256 stableCoinAmount,
         address to
-    ) public {
-        //require(hasRole(MINTER_ROLE, msg.sender), "minter");
+    ) public override {
         require(msg.sender == stakingContract || msg.sender == insuranceContract, "minter");
         require(to != address(0));
 
@@ -168,7 +164,7 @@ contract USSD is
                 // mint only for stables is allowed
                 require(token == stable, "STABLE only");
             } else if (balance > (this.totalSupply() * 15 / 100)) {
-                // WBTC or WETH only
+                // WBSC or WETH only
                 require(token == WETH || token == WBTC, "WBTCorWETH");
             } else {
                 require(token == WETH || token == WBTC || token == stable, "unknown token");
@@ -178,7 +174,7 @@ contract USSD is
         stableCoinAmount = calculateMint(token, tokenAmount);
         _mint(to, stableCoinAmount);
         
-        IERC20(token).safeTransferFrom(
+        ERC20(token).safeTransferFrom(
             msg.sender,
             address(this),
             tokenAmount
@@ -207,13 +203,13 @@ contract USSD is
     function calculateMint(address _token, uint256 _amount) public view returns (uint256) {
         // all collateral component tokens have 18 decimals, so divide by 1e36 = 1e18 price fraction and 1e18 token fraction
         if (_token == WETH) {
-            return IStableOracle(WETH_ORACLE).getPriceUSD() * _amount * (10 ** decimals()) / 1e36;    
+            return IStableOracle(WETH_ORACLE).getPriceUSD() * _amount / 1e30; // * (10 ** decimals) / 1e36;    
         } else if (_token == WBTC) {
-            return IStableOracle(WBTC_ORACLE).getPriceUSD() * _amount * (10 ** decimals()) / 1e36;    
+            return IStableOracle(WBTC_ORACLE).getPriceUSD() * _amount / 1e30; // * (10 ** decimals) / 1e36;    
         } else if (_token == STABLE) {
-            return IStableOracle(STABLE_ORACLE).getPriceUSD() * _amount * (10 ** decimals()) / 1e36;    
+            return IStableOracle(STABLE_ORACLE).getPriceUSD() * _amount / 1e30; // * (10 ** decimals) / 1e36;    
         } else if (_token == STABLEDAI) {
-            return IStableOracle(STABLEDAI_ORACLE).getPriceUSD() * _amount * (10 ** decimals()) / 1e36;    
+            return IStableOracle(STABLEDAI_ORACLE).getPriceUSD() * _amount / 1e30; // * (10 ** decimals) / 1e36;    
         }
         revert("unknown_token");
     }
@@ -252,13 +248,13 @@ contract USSD is
         if (!switchedToDAI) {
             (uint256 amount, uint256 val) = calculateRedeem(STABLE, valuationToGive);
             if (amount > 0) {
-                IERC20(STABLE).safeTransfer(to, amount);
+                ERC20(STABLE).safeTransfer(to, amount);
                 valuationToGive = valuationToGive - val;
             }
         } else {
             (uint256 amount, uint256 val) = calculateRedeem(STABLEDAI, valuationToGive);
             if (amount > 0) {
-                IERC20(STABLEDAI).safeTransfer(to, amount);
+                ERC20(STABLEDAI).safeTransfer(to, amount);
                 valuationToGive = valuationToGive - val;
             }
         }
@@ -266,7 +262,7 @@ contract USSD is
         if (valuationToGive > 0) {
             (uint256 amount, uint256 val) = calculateRedeem(WBGL, valuationToGive);
             if (amount > 0) {
-                IERC20(WBGL).safeTransfer(to, amount);
+                ERC20(WBGL).safeTransfer(to, amount);
                 valuationToGive = valuationToGive - val;
             }
         }
@@ -274,7 +270,7 @@ contract USSD is
         if (valuationToGive > 0) {
             (uint256 amount, uint256 val) = calculateRedeem(WBTC, valuationToGive);
             if (amount > 0) {
-                IERC20(WBTC).safeTransfer(to, amount);
+                ERC20(WBTC).safeTransfer(to, amount);
                 valuationToGive = valuationToGive - val;
             }
         }
@@ -282,7 +278,7 @@ contract USSD is
         if (valuationToGive > 0) {
             (uint256 amount, uint256 val) = calculateRedeem(WETH, valuationToGive);
             if (amount > 0) {
-                IERC20(WETH).safeTransfer(to, amount);
+                ERC20(WETH).safeTransfer(to, amount);
                 valuationToGive = valuationToGive - val;
             }
         }
@@ -294,25 +290,25 @@ contract USSD is
     function calculateRedeem(address _token, uint256 _valuation) public view returns (uint256 amount, uint256 valuation) {
         uint256 totalVal = 0;
         if (_token == WETH) {
-            totalVal = IStableOracle(WETH_ORACLE).getPriceUSD() * IERC20(WETH).balanceOf(address(this)) / 1e18;
+            totalVal = IStableOracle(WETH_ORACLE).getPriceUSD() * ERC20(WETH).balanceOf(address(this)) / 1e18;
         } else if (_token == WBTC) {
-            totalVal = IStableOracle(WBTC_ORACLE).getPriceUSD() * IERC20(WBTC).balanceOf(address(this)) / 1e18;
+            totalVal = IStableOracle(WBTC_ORACLE).getPriceUSD() * ERC20(WBTC).balanceOf(address(this)) / 1e18;
         } else if (_token == STABLE) {
-            totalVal = IStableOracle(STABLE_ORACLE).getPriceUSD() * IERC20(STABLE).balanceOf(address(this)) / 1e18;
+            totalVal = IStableOracle(STABLE_ORACLE).getPriceUSD() * ERC20(STABLE).balanceOf(address(this)) / 1e18;
         } else if (_token == STABLEDAI) {
-            totalVal = IStableOracle(STABLEDAI_ORACLE).getPriceUSD() * IERC20(STABLEDAI).balanceOf(address(this)) / 1e18;
+            totalVal = IStableOracle(STABLEDAI_ORACLE).getPriceUSD() * ERC20(STABLEDAI).balanceOf(address(this)) / 1e18;
         } else if (_token == WBGL) {
-            totalVal = IStableOracle(WBGL_ORACLE).getPriceUSD() * IERC20(WBGL).balanceOf(address(this)) / 1e18;
+            totalVal = IStableOracle(WBGL_ORACLE).getPriceUSD() * ERC20(WBGL).balanceOf(address(this)) / 1e18;
         } else {
             revert("unknown_token");
         }
 
         if (_valuation <= totalVal) {
             // only partial redeem using this collateral component
-            return (IERC20(_token).balanceOf(address(this)) * _valuation / totalVal, _valuation);
+            return (ERC20(_token).balanceOf(address(this)) * _valuation / totalVal, _valuation);
         } else {
             // enough to do full redeem
-            return (IERC20(_token).balanceOf(address(this)), totalVal);
+            return (ERC20(_token).balanceOf(address(this)), totalVal);
         }
     }
 
@@ -325,7 +321,7 @@ contract USSD is
         @return 1e18-based collateral ratio (1e18 = 1.0, >1.0 overcollateralized, <1.0 undercollateralized)
     */
     function collateralFactor() public view override returns (uint256) {
-        if (totalSupply() == 0) {  
+        if (totalSupply == 0) {  
             return 0;  
         }
 
@@ -333,16 +329,16 @@ contract USSD is
 
         if (!switchedToWETH) {
             if (!switchedToDAI) {
-                totalAssetsUSD += IERC20(STABLE).balanceOf(address(this)) * IStableOracle(STABLE_ORACLE).getPriceUSD() / 1e18;
+                totalAssetsUSD += ERC20(STABLE).balanceOf(address(this)) * IStableOracle(STABLE_ORACLE).getPriceUSD() / 1e18;
             } else {
-                totalAssetsUSD += IERC20(STABLEDAI).balanceOf(address(this)) * IStableOracle(STABLEDAI_ORACLE).getPriceUSD() / 1e18;
+                totalAssetsUSD += ERC20(STABLEDAI).balanceOf(address(this)) * IStableOracle(STABLEDAI_ORACLE).getPriceUSD() / 1e18;
             }
 
-            totalAssetsUSD += IERC20(WBTC).balanceOf(address(this)) * IStableOracle(WBTC_ORACLE).getPriceUSD() / 1e18;
+            totalAssetsUSD += ERC20(WBTC).balanceOf(address(this)) * IStableOracle(WBTC_ORACLE).getPriceUSD() / 1e18;
         }
 
-        totalAssetsUSD += IERC20(WETH).balanceOf(address(this)) * IStableOracle(WETH_ORACLE).getPriceUSD() / 1e18;
+        totalAssetsUSD += ERC20(WETH).balanceOf(address(this)) * IStableOracle(WETH_ORACLE).getPriceUSD() / 1e18;
 
-        return totalAssetsUSD * 1e6 / totalSupply();
+        return totalAssetsUSD * 1e6 / totalSupply;
     }
 }

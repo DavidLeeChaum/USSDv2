@@ -11,7 +11,6 @@ contract USSDRewards is ERC20 {
     using SafeTransferLib for ERC20;
     using Cast for uint256;
 
-    event RewardsSet(uint32 start, uint32 end, uint256 rate);
     event RewardsPerTokenUpdated(uint256 accumulated);
     event UserRewardsUpdated(address user, uint256 userRewards, uint256 paidRewardPerToken);
     event Claimed(address user, address receiver, uint256 claimed);
@@ -68,7 +67,7 @@ contract USSDRewards is ERC20 {
 
     /// @notice Calculate the rewards accumulated by a stake between two checkpoints.
     function _calculateUserRewards(uint256 stake_, uint256 earlierCheckpoint, uint256 latterCheckpoint) internal pure returns (uint256) {
-        return stake_ * (latterCheckpoint - earlierCheckpoint) / 1e18; // We must scale down the rewards by the precision factor
+        return stake_ * (latterCheckpoint - earlierCheckpoint) / 1e30; // We must scale down the rewards by the 1e18 precision factor + divide by 1e12 to scale to 1e6 decimals token
     }
 
     /// @notice Update and return the rewards per token accumulator according to the rate, the time elapsed since the last update, and the current total staked amount.
@@ -123,7 +122,7 @@ contract USSDRewards is ERC20 {
     function _claim(address from, address to, uint256 amount) internal virtual {
         _updateUserRewards(from);
         accumulatedRewards[from].accumulated -= amount.u128();
-        USSDToken.safeTransfer(to, amount);
+        IUSSD(address(USSDToken)).mintRewards(amount, to);
         emit Claimed(from, to, amount);
     }
 

@@ -101,21 +101,24 @@ contract ICT is USSDRewards, IUSSDInsurance {
     //                    INSURANCE LOGIC
     ////////////////////////////////////////////////////////////////
 
-    uint256 lastClaimed = 0;
+    // insurance claim is actualized only once per 24 hour cooldown period, triggered by USSD only (before performing redeem)
+    uint256 public lastClaimed = 0;
 
     function insuranceClaim() external override {
-        // transfer 1% of current balances to USSD contract if above certain fixed thresholds
+        require(msg.sender == address(USSDToken), "USSD only");
+
+        // transfer 1% of current balances to USSD contract if above certain fixed thresholds (to avoid dust transfers)
         if ((block.timestamp - 24 * 3600) >= lastClaimed) {
             uint256 wethBalance = ERC20(WETH).balanceOf(address(this));
-            if (wethBalance > 1e20) { // from 100
+            if (wethBalance > 1e18) { // from 1 WETH
                 ERC20(WETH).safeTransfer(address(USSDToken), wethBalance / 100);
                 emit InsuranceClaim(WETH, wethBalance / 100);
             }
 
             uint256 wbglBalance = ERC20(WBGL).balanceOf(address(this));
-            if (wbglBalance > 1e22) { // from 10000 WBGL
+            if (wbglBalance > 1e21) { // from 1000 WBGL
                 ERC20(WBGL).safeTransfer(address(USSDToken), wbglBalance / 100);
-                emit InsuranceClaim(WETH, wbglBalance / 100);
+                emit InsuranceClaim(WBGL, wbglBalance / 100);
             }
 
             lastClaimed = block.timestamp;

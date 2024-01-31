@@ -240,7 +240,7 @@ contract('USSD', async function (accounts) {
   }
 
   beforeEach(async function () {
-    this.USSD = await USSD.new("US Secured Dollar", "USSD", { from: accounts[0] });
+    this.USSD = await USSD.new("US Secured Dollar", "USSD", 6, { from: accounts[0] });
   });
  
   it('has oracle prices returning expected values', async function() {
@@ -268,13 +268,13 @@ contract('USSD', async function (accounts) {
     this.ICT = await ICT.new(this.USSD.address, "Insurance Capital Trust", "ICT", { from: accounts[0] });
 
     await truffleAssert.reverts(this.USSD.connectStaking(this.stUSSD.address, { from: accounts[1] }), "owner");
-    await truffleAssert.reverts(this.USSD.connectInsurance(this.stUSSD.address, { from: accounts[1] }), "owner");
+    await truffleAssert.reverts(this.USSD.connectInsurance(this.ICT.address, { from: accounts[1] }), "owner");
 
     await this.USSD.connectStaking(this.stUSSD.address);
-    await this.USSD.connectInsurance(this.stUSSD.address);
+    await this.USSD.connectInsurance(this.ICT.address);
     
     await truffleAssert.reverts(this.USSD.connectStaking(this.stUSSD.address, { from: accounts[1] }), "");
-    await truffleAssert.reverts(this.USSD.connectInsurance(this.stUSSD.address, { from: accounts[1] }), "");
+    await truffleAssert.reverts(this.USSD.connectInsurance(this.ICT.address, { from: accounts[1] }), "");
   });
 
   it('can switch to DAI and then to WETH', async function() {
@@ -309,6 +309,7 @@ contract('USSD', async function (accounts) {
   });
 
   it('can mint itself as reward for staking or insurance contract', async function() {
+
     await this.USSD.connectStaking(accounts[2]);
     await this.USSD.connectInsurance(accounts[3]);
 
@@ -321,6 +322,7 @@ contract('USSD', async function (accounts) {
   });
 
   it('can be minted for token (stables, WETH)', async function() {
+
     // first test minting for stables, as we have empty supply
     await prepareAssets();
 
@@ -360,6 +362,7 @@ contract('USSD', async function (accounts) {
   });
 
   it('can be redeemed for stablecoins', async function() {
+
     // first test minting for stables, as we have empty supply
     await prepareAssets();
 
@@ -397,9 +400,69 @@ contract('USSD', async function (accounts) {
     expect((await this.USSD.totalSupply()).toString()).to.equal('925000000');
   });
 
+  it('can be redeemed for stablecoins and other collateral (WETH)', async function() {
+    // first test minting for stables, as we have empty supply
+    await prepareAssets();
+
+    await prepareOracles(this.USSD);
+    console.log("Oracles prepared");
+
+    const USDT = '0x55d398326f99059fF775485246999027B3197955';
+    const USDTABI = '[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"constant":true,"inputs":[],"name":"_decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"getOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
+    let USDTContract = new web3.eth.Contract(JSON.parse(USDTABI), USDT);
+    
+    const WETH = '0x2170Ed0880ac9A755fd29B2688956BD959F933F8';
+    const WETHABI = '[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"constant":true,"inputs":[],"name":"_decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"getOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
+    let WETHContract = new web3.eth.Contract(JSON.parse(WETHABI), WETH);
+
+    await USDTContract.methods.approve(this.USSD.address, web3.utils.toBN('1000000000000000000000')).send({ from: accounts[0] });
+    await WETHContract.methods.approve(this.USSD.address, web3.utils.toBN('1000000000000000000000')).send({ from: accounts[0] });
+
+    // must be minted with stables first
+    await truffleAssert.reverts(this.USSD.mintForToken(WETH, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "STABLE only");
+    
+    await this.USSD.mintForToken(USDT, web3.utils.toBN('1000000000000000000000'), accounts[1], { from: accounts[0] });
+    console.log("Minted 1000.0 USSD for 1000.0 USDT");
+
+    expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('1000000000');
+
+    expect((await this.USSD.totalSupply()).toString()).to.equal('1000000000');
+
+    expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
+
+    // if stables are more than 5% and BTC winter, expect WBTC/WETH
+    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
+    
+    await this.USSD.mintForToken(WETH, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] });
+    console.log("Minted 2500.0 USSD for 1.0 WETH");
+
+    expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('3500000000');
+
+    expect((await this.USSD.totalSupply()).toString()).to.equal('3500000000');
+
+    expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
+
+    // no USSD to redeem reverts
+    await truffleAssert.reverts(this.USSD.redeem(web3.utils.toBN('75000000'), accounts[2], { from: accounts[0] }));
+    
+    await this.USSD.redeem(web3.utils.toBN('3000000000'), accounts[3], { from: accounts[1] });
+
+    expect((await this.USSD.totalSupply()).toString()).to.equal('500000000');
+    //expect((await this.USDT.balanceOf(accounts[3])).toString()).to.equal('1000000000');
+    //expect((await this.WETH.balanceOf(accounts[3])).toString()).to.equal('750000000000000000');
+    //await USDTContract.methods.balanceOf(accounts[0]).call(function(error, result) {
+    //  console.log(`USDT balance of ${accounts[0]}: ${result}`);
+    //});
+
+    // we expect both USDT and WETH to be given on redeem
+    expect((await USDTContract.methods.balanceOf(accounts[3]).call()).toString()).to.equal('1000000000000000000000');
+    expect((await WETHContract.methods.balanceOf(accounts[3]).call()).toString()).to.equal('800000000000000000');
+  });
+
   // this test should run last as it increases timestamp of block by a large amount that would
   // impact oracles etc.
   it('detects when it is bitcoin cycle summer', async function() {
+
     // contract method is internal, use JS implementation
     // we use only block timestamp so doesn't matter on which chain this is calculated
     btcSummer = async function() {
