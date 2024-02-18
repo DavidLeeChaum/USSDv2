@@ -38,6 +38,12 @@ contract USSD is
 
     address private owner;
 
+    uint256 private currSupply;
+    uint256 private prevSupply;
+    uint256 private currCollateralFactor;
+    uint256 private prevCollateralFactor;
+    uint256 private prevBlockNo;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(string memory _name, string memory _symbol, uint8 _decimals) ERC20(_name, _symbol, _decimals) {
         owner = msg.sender;
@@ -94,7 +100,7 @@ contract USSD is
         WBTC_ORACLE = _WBTCOracle;
         WETH_ORACLE = _WETHOracle;
     }
-    
+
     /**
         @dev change owner address or completely lock owner methods
      */
@@ -137,7 +143,7 @@ contract USSD is
         require(to != address(0));
 
         _mint(to, stableCoinAmount);
-        
+
         emit Mint(msg.sender, to, address(0), 0, stableCoinAmount);
     }
 
@@ -179,6 +185,15 @@ contract USSD is
             address(this),
             tokenAmount
         );
+
+        // protect from flash-loan supply inflation
+        if (block.number > prevBlockNo) {
+            prevSupply = currSupply; // remember latest total supply in some prev. block
+            prevCollateralFactor = currCollateralFactor;
+            prevBlockNo = block.number;
+        }
+        currSupply = totalSupply;
+        currCollateralFactor = collateralFactor();
 
         emit Mint(msg.sender, to, token, tokenAmount, stableCoinAmount);
     }
@@ -320,7 +335,7 @@ contract USSD is
         @dev Estimate own collateral ratio based on collateral component prices
         @return 1e18-based collateral ratio (1e18 = 1.0, >1.0 overcollateralized, <1.0 undercollateralized)
     */
-    function collateralFactor() public view override returns (uint256) {
+    function collateralFactor() public view returns (uint256) {
         if (totalSupply == 0) {  
             return 0;  
         }
@@ -340,5 +355,13 @@ contract USSD is
         totalAssetsUSD += ERC20(WETH).balanceOf(address(this)) * IStableOracle(WETH_ORACLE).getPriceUSD() / 1e18;
 
         return totalAssetsUSD * 1e6 / totalSupply;
+    }
+
+    /**
+        @dev returns collateral factor and total supply at the state after mint in some previous block
+             (used for the flash-loan protection when distributing rewards)
+    */
+    function prevSupplyAndCF() override external view returns (uint256, uint256) {
+        return (prevSupply, prevCollateralFactor);
     }
 }

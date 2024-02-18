@@ -41,6 +41,7 @@ contract USSDRewards is ERC20 {
     /// @notice Update the rewards per token accumulator according to the rate, the time elapsed since the last update, and the current total staked amount.
     function _calculateRewardsPerToken(RewardsPerToken memory rewardsPerTokenIn) internal view returns(RewardsPerToken memory) {
         RewardsPerToken memory rewardsPerTokenOut = RewardsPerToken(rewardsPerTokenIn.accumulated, rewardsPerTokenIn.lastUpdated);
+        (uint256 USSDsupply, uint256 cf) = IUSSD(address(USSDToken)).prevSupplyAndCF();
         uint256 totalSupply_ = totalSupply;
 
         uint256 updateTime = block.timestamp;
@@ -56,9 +57,8 @@ contract USSDRewards is ERC20 {
         // calculate and update the new value of the accumulator.
         // rewards are distributed only if collateral factor is > 1.05, but the whole collateral valuation is used to give rewards
         uint256 collateralValuation = 0;
-        uint256 cf = IUSSD(address(USSDToken)).collateralFactor();        
         if (cf > 1050000000000000000) {
-            collateralValuation = (IUSSD(address(USSDToken)).collateralFactor()) * USSDToken.totalSupply() / 1e6;
+            collateralValuation = cf * USSDsupply / 1e6;
         }
 
         rewardsPerTokenOut.accumulated = (rewardsPerTokenIn.accumulated + 1e18 * (collateralValuation * elapsed * targetAPY / 1e18) / totalSupply_).u128(); // The rewards per token are scaled up for precision

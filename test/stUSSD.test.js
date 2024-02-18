@@ -76,6 +76,12 @@ contract('stUSSD (staked USSD, rewards program)', async function (accounts) {
 
     expect((await this.USSD.collateralFactor()).toString()).to.equal('1714285714285714285');
 
+    // as we operate with totalSupply and CF number after mint in previous block (for protection)
+    // update block and call mint of 0 tokens
+    await this.USSD.mintForToken(WETH, web3.utils.toBN('0'), accounts[1], { from: accounts[0] }); // to set as current
+    await time.advanceBlock();
+    await this.USSD.mintForToken(WETH, web3.utils.toBN('0'), accounts[1], { from: accounts[0] }); // to update prev mint block state vars
+
     // now we can get some premium, but we need for time to pass
     expect((await this.stUSSD.currentUserRewards(accounts[0])).toString()).to.equal('0');
     //expect((await this.stUSSD.currentUserRewards(accounts[1])).toString()).to.equal('0');
