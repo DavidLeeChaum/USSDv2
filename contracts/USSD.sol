@@ -24,11 +24,11 @@ contract USSD is
     bool public switchedToDAI;
     bool public switchedToWETH;
 
-    address public constant STABLE = 0x55d398326f99059fF775485246999027B3197955;
-    address public constant STABLEDAI = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3;
+    address public constant STABLE = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9;
+    address public constant STABLEDAI = 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1;
     address public constant WBGL = 0x2bA64EFB7A4Ec8983E22A49c81fa216AC33f383A;
-    address public constant WBTC = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c;
-    address public constant WETH = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
+    address public constant WBTC = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f;
+    address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
     address private STABLE_ORACLE;
     address private STABLEDAI_ORACLE;
@@ -105,6 +105,7 @@ contract USSD is
         @dev change owner address or completely lock owner methods
      */
     function changeOwner(address _owner) public onlyOwner {
+        require(owner != 0x0000000000000000000000000000000000000000, "zero addr");
         owner = _owner;
     }
 

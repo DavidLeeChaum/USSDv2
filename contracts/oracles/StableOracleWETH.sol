@@ -10,7 +10,7 @@ contract StableOracleWETH is IStableOracle {
 
     constructor() {
         priceFeed = AggregatorV3Interface(
-            0x9ef1B8c0E4F7dc8bF5719Ea496883DC6401d5b2e
+            0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
         );
     }
 

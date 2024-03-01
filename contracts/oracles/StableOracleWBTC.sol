@@ -10,7 +10,7 @@ contract StableOracleWBTC is IStableOracle {
 
     constructor() {
         priceFeed = AggregatorV3Interface(
-            0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf
+            0xd0C7101eACbB49F3deCcCc166d238410D6D46d57
         );
     }
 

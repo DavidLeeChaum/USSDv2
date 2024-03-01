@@ -10,7 +10,7 @@ contract StableOracleUSDT is IStableOracle {
 
     constructor() {
         priceFeedUSDTUSD = AggregatorV3Interface(
-            0xB97Ad0E74fa7d920791E90258A6E2085088b4320
+            0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7
         );
     }
 

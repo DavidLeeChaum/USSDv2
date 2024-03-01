@@ -12,7 +12,7 @@ contract ICT is USSDRewards, IUSSDInsurance {
 
     uint256 public constant SDT_RATE = 42000000000000000; // 4.2% APY
 
-    address public constant WETH = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8;
+    address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     address public constant WBGL = 0x2bA64EFB7A4Ec8983E22A49c81fa216AC33f383A;
 
     address private owner;
@@ -110,16 +110,12 @@ contract ICT is USSDRewards, IUSSDInsurance {
         // transfer 1% of current balances to USSD contract if above certain fixed thresholds (to avoid dust transfers)
         if ((block.timestamp - 24 * 3600) >= lastClaimed) {
             uint256 wethBalance = ERC20(WETH).balanceOf(address(this));
-            if (wethBalance > 1e18) { // from 1 WETH
-                ERC20(WETH).safeTransfer(address(USSDToken), wethBalance / 100);
-                emit InsuranceClaim(WETH, wethBalance / 100);
-            }
+            ERC20(WETH).safeTransfer(address(USSDToken), wethBalance / 100);
+            emit InsuranceClaim(WETH, wethBalance / 100);
 
             uint256 wbglBalance = ERC20(WBGL).balanceOf(address(this));
-            if (wbglBalance > 1e21) { // from 1000 WBGL
-                ERC20(WBGL).safeTransfer(address(USSDToken), wbglBalance / 100);
-                emit InsuranceClaim(WBGL, wbglBalance / 100);
-            }
+            ERC20(WBGL).safeTransfer(address(USSDToken), wbglBalance / 100);
+            emit InsuranceClaim(WBGL, wbglBalance / 100);
 
             lastClaimed = block.timestamp;
         }

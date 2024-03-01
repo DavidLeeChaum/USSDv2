@@ -14,6 +14,11 @@ module.exports = {
       port: 8545,            // Standard Ethereum port (default: none)
       network_id: 56,        // Any network (default: none)
     },
+    arb_fork: {
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 8545,            // Standard Ethereum port (default: none)
+      network_id: 42161,        // Any network (default: none)
+    },
     live: {
       networkCheckTimeout: 10000,
       provider: function() {

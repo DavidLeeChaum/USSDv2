@@ -10,7 +10,7 @@ contract StableOracleDAI is IStableOracle {
 
     constructor() {
         priceFeedUSDTUSD = AggregatorV3Interface(
-            0x132d3C0B1D2cEa0BC552588063bdBb210FDeecfA
+            0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB
         );
     }
 

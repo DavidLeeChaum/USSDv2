@@ -21,7 +21,7 @@ contract StableOracleWBGL is IStableOracle {
         uint256 USDTWBGLPrice = staticOracleUniV3
             .quoteSpecificPoolsWithTimePeriod(
                 1000000000000000000, // 1 USDT
-                0x55d398326f99059fF775485246999027B3197955, // USDT (base token)
+                0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9, // USDT (base token)
                 0x2bA64EFB7A4Ec8983E22A49c81fa216AC33f383A, // WBGL (quote token)
                 pools, // WBGL/WETH pool uni v3
                 3600 // period
