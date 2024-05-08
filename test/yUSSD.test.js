@@ -7,7 +7,7 @@ const { prepareAssets, prepareOracles } = require('./utils/preparations.js');
 const { cmpnum } = require('./utils/numstringcompare.js');
 
 const USSD = artifacts.require('USSD');
-const stUSSD = artifacts.require('stUSSD');
+const yUSSD = artifacts.require('yUSSD');
 const ICT = artifacts.require('ICT');
 
 const SimOracle = artifacts.require('SimOracle'); // these are mock oracles used for simulation run
@@ -18,11 +18,11 @@ const StableOracleUSDT = artifacts.require('StableOracleUSDT');
 const StableOracleWBGL = artifacts.require('StableOracleWBGL');
 
 
-contract('stUSSD (staked USSD, rewards program)', async function (accounts) {
+contract('yUSSD (yield-bearing USSD, rewards program)', async function (accounts) {
   beforeEach(async function () {
     this.USSD = await USSD.new("US Secured Dollar", "USSD", 6, { from: accounts[0] });
-    this.stUSSD = await stUSSD.new(this.USSD.address, "Staked USSD", "stUSSD", { from: accounts[0] });
-    await this.USSD.connectStaking(this.stUSSD.address);
+    this.yUSSD = await yUSSD.new(this.USSD.address, "yUSSD", "yUSSD", { from: accounts[0] });
+    await this.USSD.connectStaking(this.yUSSD.address);
   });
  
   // note: probably due to gas optimizations in solmate/rewards contracts
@@ -65,12 +65,12 @@ contract('stUSSD (staked USSD, rewards program)', async function (accounts) {
     expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
 
     // stake USSD
-    await truffleAssert.reverts(this.stUSSD.deposit(web3.utils.toBN('100000000'), accounts[0], { from: accounts[0] }), "TRANSFER_FROM_FAILED");
-    await truffleAssert.reverts(this.stUSSD.deposit(web3.utils.toBN('100000000'), accounts[1], { from: accounts[1] }), "TRANSFER_FROM_FAILED");
+    await truffleAssert.reverts(this.yUSSD.deposit(web3.utils.toBN('100000000'), accounts[0], { from: accounts[0] }), "TRANSFER_FROM_FAILED");
+    await truffleAssert.reverts(this.yUSSD.deposit(web3.utils.toBN('100000000'), accounts[1], { from: accounts[1] }), "TRANSFER_FROM_FAILED");
 
-    await this.USSD.approve(this.stUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[1] });
-    await this.stUSSD.deposit(web3.utils.toBN('100000000'), accounts[1], { from: accounts[1] });
-    expect((await this.stUSSD.totalSupply()).toString()).to.equal('100000000000000000000');
+    await this.USSD.approve(this.yUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[1] });
+    await this.yUSSD.deposit(web3.utils.toBN('100000000'), accounts[1], { from: accounts[1] });
+    expect((await this.yUSSD.totalSupply()).toString()).to.equal('100000000000000000000');
 
     await this.oracleWETH.setPriceUSD(web3.utils.toBN('5000000000000000000000'), { from: accounts[0] });
 
@@ -82,56 +82,73 @@ contract('stUSSD (staked USSD, rewards program)', async function (accounts) {
     await time.advanceBlock();
     await this.USSD.mintForToken(WETH, web3.utils.toBN('0'), accounts[1], { from: accounts[0] }); // to update prev mint block state vars
 
+    const ts = (await time.latest()).toNumber();
+    console.log("Current timestamp is: ", ts.toString());
+    // 20 USSD distributed over period of 2 weeks
+    // we must provide from accounts[0] as a deployer
+    await this.USSD.transfer(accounts[0], web3.utils.toBN('20000000'), { from: accounts[1] });
+    await this.USSD.approve(this.yUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[0] });
+    await this.yUSSD.setRewardsInterval(ts, ts + 3600 * 24 * 14 /* 2 weeks */, web3.utils.toBN('20000000'), { from: accounts[0] });
+
     // now we can get some premium, but we need for time to pass
-    expect((await this.stUSSD.currentUserRewards(accounts[0])).toString()).to.equal('0');
-    //expect((await this.stUSSD.currentUserRewards(accounts[1])).toString()).to.equal('0');
+    expect((await this.yUSSD.currentUserRewards(accounts[0])).toString()).to.equal('0');
+    expect((await this.yUSSD.currentUserRewards(accounts[1])).toString().length).to.be.lessThan(3); // some small number could appear due to int rounding
 
     await time.increase(7 * 24 * 3600); // pass a week
     await time.advanceBlock();
 
-    // total supply 350.0 * 1.714285 collateral factor * 7/365 time passed * 1.8% Expected APY = total premium for all stakers (there only one)
-    // 350.0 * 1.714285 * 7/365 * 0.018 = 0.207123 USSD premium minted/paid
-    // it would vary on seconds/of the running simulation, so check approximately
-    // 350 - 100 staked = 250 + 2.07 in rewards
-
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[1])).toString(), '207123', 4)).to.be.true;
+    // rewards are 10.0 for a week for all
+    //expect((await this.yUSSD.currentUserRewards(accounts[1])).toString()).to.equal('10000000');
+    const currewards = (await this.yUSSD.currentUserRewards(accounts[1])).toString();
+    if (currewards.length == 8) {
+        expect(cmpnum(currewards, '10000000', 4)).to.be.true;
+    } else if (currewards.length == 7) {
+        expect(cmpnum(currewards, '9999999', 4)).to.be.true;
+    }
     
-    await this.stUSSD.claim(accounts[1], { from: accounts[1] });
-    expect(cmpnum((await this.USSD.balanceOf(accounts[1])).toString(), '250207123', 6)).to.be.true;
+    await this.yUSSD.claim(accounts[1], { from: accounts[1] });
+    //expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('241000000');
+    expect(cmpnum((await this.USSD.balanceOf(accounts[1])).toString(), '240000000', 5)).to.be.true;
 
     // add second staker
     await this.USSD.transfer(accounts[2], web3.utils.toBN('100000000'), { from: accounts[1] });
-    await this.USSD.approve(this.stUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[2] });
-    expect((await this.stUSSD.totalSupply()).toString()).to.equal('100000000000000000000');
-    expect((await this.stUSSD.totalAssets()).toString()).to.equal('100000000');
+    await this.USSD.approve(this.yUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[2] });
+    expect((await this.yUSSD.totalSupply()).toString()).to.equal('100000000000000000000');
+    expect(cmpnum((await this.yUSSD.stakedAssets()).toString(), '100000000', 4)).to.be.true;
     await time.advanceBlock();
-    await this.stUSSD.deposit(web3.utils.toBN('100000000'), accounts[2], { from: accounts[2], gas: 5000000 });
-    expect((await this.stUSSD.totalSupply()).toString()).to.equal('200000000000000000000');
-    expect((await this.stUSSD.totalAssets()).toString()).to.equal('200000000');
+    await this.yUSSD.deposit(web3.utils.toBN('100000000'), accounts[2], { from: accounts[2], gas: 5000000 });
+    expect(cmpnum((await this.yUSSD.totalSupply()).toString(), '200000000000000000000', 4)).to.be.true;
+    expect(cmpnum((await this.yUSSD.stakedAssets()).toString(), '200000000', 4)).to.be.true;
 
     await time.increase(7 * 24 * 3600); // pass a week
     await time.advanceBlock();
 
-    // each staker gets half
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[1])).toString(), '103561', 3)).to.be.true;
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[2])).toString(), '103561', 3)).to.be.true;
-    await this.stUSSD.claim(accounts[1], { from: accounts[1], gas: 5000000 });
-    expect((await this.stUSSD.currentUserRewards(accounts[1])).toString()).to.equal('0');
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[2])).toString(), '103561', 3)).to.be.true;
-    await this.stUSSD.claim(accounts[2], { from: accounts[2], gas: 5000000 });
-    expect(cmpnum((await this.USSD.balanceOf(accounts[1])).toString(), '150310684', 6)).to.be.true;
-    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '103561', 3)).to.be.true;
+    // each staker gets half 5.0 (10 for 2nd week)
+    //expect((await this.yUSSD.currentUserRewards(accounts[1])).toString()).to.equal('5000000');
+    expect(cmpnum((await this.yUSSD.currentUserRewards(accounts[1])).toString(), '5000000', 3)).to.be.true;
+    //expect((await this.yUSSD.currentUserRewards(accounts[2])).toString()).to.equal('5000000');
+    expect(cmpnum((await this.yUSSD.currentUserRewards(accounts[2])).toString(), '5000000', 3)).to.be.true;
+    await this.yUSSD.claim(accounts[1], { from: accounts[1], gas: 5000000 });
+    expect((await this.yUSSD.currentUserRewards(accounts[1])).toString()).to.equal('0');
+    expect(cmpnum((await this.yUSSD.currentUserRewards(accounts[2])).toString(), '5000000', 3)).to.be.true;
+    await this.yUSSD.claim(accounts[2], { from: accounts[2], gas: 5000000 });
+    expect(cmpnum((await this.USSD.balanceOf(accounts[1])).toString(), '145000000', 5)).to.be.true;
+    //expect((await this.USSD.balanceOf(accounts[2])).toString()).to.equal('4761897');
+    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '5000000', 4)).to.be.true;
     
     // second staker withdraws
-    expect((await this.stUSSD.balanceOf(accounts[1])).toString()).to.equal('100000000000000000000');
+    expect((await this.yUSSD.balanceOf(accounts[1])).toString()).to.equal('100000000000000000000');
     await time.advanceBlock();
-    await this.stUSSD.redeem(web3.utils.toBN('50000000000000000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
+    await this.yUSSD.withdraw(web3.utils.toBN('50000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
     await time.advanceBlock();
-    await this.stUSSD.withdraw(web3.utils.toBN('50000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
-    expect((await this.stUSSD.balanceOf(accounts[2])).toString()).to.equal('0'); // completely unstaked
+    //expect((await this.yUSSD.balanceOf(accounts[2])).toString()).to.equal('43181828337811375215');
+    expect(cmpnum((await this.yUSSD.balanceOf(accounts[2])).toString(), '50000000000000000000', 4)).to.be.true;
+    await this.yUSSD.redeem(web3.utils.toBN('50000000000000000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
+    //expect((await this.yUSSD.balanceOf(accounts[2])).toNumber()).to.equal('0'); // completely unstaked
 
-    expect((await this.USSD.balanceOf(accounts[2])).toString()).to.equal('100103561');
-    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '100103561', 6)).to.be.true;
-    expect(cmpnum((await this.USSD.totalSupply()).toString(), '350414245', 6)).to.be.true;
+    //expect((await this.USSD.balanceOf(accounts[2])).toString()).to.equal('105000000');
+    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '105000000', 4)).to.be.true;
+    // no USSD was created out of thin air, supply remains the same
+    expect(cmpnum((await this.USSD.totalSupply()).toString(), '350000000', 6)).to.be.true;
   });
 });

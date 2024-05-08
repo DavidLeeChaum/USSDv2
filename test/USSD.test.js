@@ -14,6 +14,7 @@ const SimOracle = artifacts.require('SimOracle'); // these are mock oracles used
 const StableOracleWBTC = artifacts.require('StableOracleWBTC');
 const StableOracleWETH = artifacts.require('StableOracleWETH');
 const StableOracleUSDT = artifacts.require('StableOracleUSDT');
+const StableOracleDAI = artifacts.require('StableOracleDAI');
 const StableOracleWBGL = artifacts.require('StableOracleWBGL');
 
 
@@ -28,8 +29,9 @@ contract('USSD', async function (accounts) {
     this.OBTC = await StableOracleWBTC.new({ from: accounts[0] });
     this.OWETH = await StableOracleWETH.new({ from: accounts[0] });
     // these two oracles use DEX data and require WETH oracle address in constructor
-    this.OUSDT = await StableOracleUSDT.new(this.OWETH.address, { from: accounts[0] });
-    this.OWBGL = await StableOracleWBGL.new(this.OWETH.address, { from: accounts[0] });
+    this.OUSDT = await StableOracleUSDT.new({ from: accounts[0] });
+    this.ODAI = await StableOracleDAI.new({ from: accounts[0] });
+    this.OWBGL = await StableOracleWBGL.new({ from: accounts[0] });
 
     let BTCprice = await this.OBTC.getPriceUSD({ from: accounts[0] });
     console.log(`Oracle reported WBTC price: ${BTCprice}`);
@@ -39,6 +41,9 @@ contract('USSD', async function (accounts) {
 
     let USDTprice = await this.OUSDT.getPriceUSD({ from: accounts[0] });
     console.log(`Oracle reported USDT price: ${USDTprice}`);
+
+    let DAIprice = await this.ODAI.getPriceUSD({ from: accounts[0] });
+    console.log(`Oracle reported DAI price: ${USDTprice}`);
 
     let WBGLprice = await this.OWBGL.getPriceUSD({ from: accounts[0] });
     console.log(`Oracle reported WBGL price: ${WBGLprice}`);
@@ -123,13 +128,13 @@ contract('USSD', async function (accounts) {
     // must be minted with stables first
     await truffleAssert.reverts(this.USSD.mintForToken(WETH, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "STABLE only");
     
-    await this.USSD.mintForToken(USDT, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] });
+    await this.USSD.mintForToken(USDT, web3.utils.toBN('1000000'), accounts[1], { from: accounts[0] });
     console.log("Minted 1.0 USSD for 1.0 USDT");
 
     expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('1000000');
 
     // if stables are more than 5% and BTC winter, expect WBTC/WETH
-    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
+    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('1000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
     
     await this.USSD.mintForToken(WETH, web3.utils.toBN('100000000000000000'), accounts[2], { from: accounts[0] });
     console.log("Minted 250.0 USSD for 0.1 WETH");
@@ -162,7 +167,7 @@ contract('USSD', async function (accounts) {
     // must be minted with stables first
     await truffleAssert.reverts(this.USSD.mintForToken(WETH, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "STABLE only");
     
-    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000000000000000'), accounts[1], { from: accounts[0] });
+    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000'), accounts[1], { from: accounts[0] });
     console.log("Minted 100.0 USSD for 100.0 USDT");
 
     expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('100000000');
@@ -199,7 +204,7 @@ contract('USSD', async function (accounts) {
     // must be minted with stables first
     await truffleAssert.reverts(this.USSD.mintForToken(WETH, web3.utils.toBN('1000000000000000000'), accounts[1], { from: accounts[0] }), "STABLE only");
     
-    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000000000000000'), accounts[1], { from: accounts[0] });
+    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000'), accounts[1], { from: accounts[0] });
     console.log("Minted 100.0 USSD for 100.0 USDT");
 
     expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('100000000');
@@ -209,7 +214,7 @@ contract('USSD', async function (accounts) {
     expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
 
     // if stables are more than 5% and BTC winter, expect WBTC/WETH
-    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('100000000000000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
+    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('1000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
     
     await this.USSD.mintForToken(WETH, web3.utils.toBN('100000000000000000'), accounts[1], { from: accounts[0] });
     console.log("Minted 250.0 USSD for 0.1 WETH");
@@ -228,7 +233,7 @@ contract('USSD', async function (accounts) {
     expect((await this.USSD.totalSupply()).toString()).to.equal('50000000');
 
     // we expect both USDT and WETH to be given on redeem
-    expect((await USDTContract.methods.balanceOf(accounts[3]).call()).toString()).to.equal('100000000000000000000');
+    expect((await USDTContract.methods.balanceOf(accounts[3]).call()).toString()).to.equal('100000000');
     expect((await WETHContract.methods.balanceOf(accounts[3]).call()).toString()).to.equal('80000000000000000');
   });
 
@@ -242,7 +247,7 @@ contract('USSD', async function (accounts) {
     const USDTABI = '[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"constant":true,"inputs":[],"name":"_decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"getOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
     let USDTContract = new web3.eth.Contract(JSON.parse(USDTABI), USDT);
     
-    const WBTC = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
+    const WBTC = '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f';
     const WBTCABI = '[{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"constant":true,"inputs":[],"name":"_decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"burn","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"getOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"renounceOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
     let WBTCContract = new web3.eth.Contract(JSON.parse(WBTCABI), WBTC);
 
@@ -252,7 +257,7 @@ contract('USSD', async function (accounts) {
     // must be minted with stables first
     await truffleAssert.reverts(this.USSD.mintForToken(WBTC, web3.utils.toBN('1000000000000000'), accounts[1], { from: accounts[0] }), "STABLE only");
     
-    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000000000000000'), accounts[1], { from: accounts[0] });
+    await this.USSD.mintForToken(USDT, web3.utils.toBN('100000000'), accounts[1], { from: accounts[0] });
     console.log("Minted 100.0 USSD for 100.0 USDT");
 
     expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('100000000');
@@ -262,14 +267,17 @@ contract('USSD', async function (accounts) {
     expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
 
     // if stables are more than 5% and BTC winter, expect WBTC/WETH
-    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('100000000000000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
+    await truffleAssert.reverts(this.USSD.mintForToken(USDT, web3.utils.toBN('1000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
     
-    await this.USSD.mintForToken(WBTC, web3.utils.toBN('1000000000000000'), accounts[1], { from: accounts[0] });
+    // 40000000000000000000000 * 100000 / 1e20;
+    expect((await this.USSD.calculateMint(WBTC, web3.utils.toBN('100000'))).toString()).to.equal('40000000');
+
+    await this.USSD.mintForToken(WBTC, web3.utils.toBN('100000'), accounts[1], { from: accounts[0] });
     console.log("Minted 40.0 USSD for 0.001 WBTC");
 
-    expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('140000000');
-
     expect((await this.USSD.totalSupply()).toString()).to.equal('140000000');
+
+    expect((await this.USSD.balanceOf(accounts[1])).toString()).to.equal('140000000');
 
     expect((await this.USSD.collateralFactor()).toString()).to.equal('1000000000000000000');
 
@@ -281,8 +289,8 @@ contract('USSD', async function (accounts) {
     expect((await this.USSD.totalSupply()).toString()).to.equal('35000000');
 
     // we expect both USDT and WBTC to be given on redeem
-    expect((await USDTContract.methods.balanceOf(accounts[5]).call()).toString()).to.equal('100000000000000000000');
-    expect((await WBTCContract.methods.balanceOf(accounts[5]).call()).toString()).to.equal('125000000000000'); // 5 USD worth of 40K WBTC = 0.000125
+    expect((await USDTContract.methods.balanceOf(accounts[5]).call()).toString()).to.equal('100000000');
+    expect((await WBTCContract.methods.balanceOf(accounts[5]).call()).toString()).to.equal('12500'); // 5 USD worth of 40K WBTC = 0.000125
 
     // drop collateral factor (WBTC price decrease)
     await this.oracleWBTC.setPriceUSD(web3.utils.toBN('30000000000000000000000'), { from: accounts[0] }); // 25% price drop
@@ -303,7 +311,7 @@ contract('USSD', async function (accounts) {
     // we expect both USDT and WBTC to be given on redeem
     expect((await USDTContract.methods.balanceOf(accounts[4]).call()).toString()).to.equal('0'); // not stables left
     // wanted 10 USD worth of 30K WBTC = 0.0003333333 BTC, but penalty * 0.95 * 0.75 = 0.0002375 WBTC
-    expect((await WBTCContract.methods.balanceOf(accounts[4]).call()).toString()).to.equal('237500000000000');
+    expect((await WBTCContract.methods.balanceOf(accounts[4]).call()).toString()).to.equal('23750');
   });
 
   // this test should run last as it increases timestamp of block by a large amount that would
