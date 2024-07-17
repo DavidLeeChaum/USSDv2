@@ -5,12 +5,13 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 import "../interfaces/IStableOracle.sol";
 
-contract StableOracleUSDT is IStableOracle {
+contract StableOracleDAI is IStableOracle {
     AggregatorV3Interface public immutable priceFeedUSDTUSD;
 
     constructor() {
         priceFeedUSDTUSD = AggregatorV3Interface(
-            0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7
+            // Arbitrum Chainlink BRL/USD
+            0x04b7384473A2aDF1903E3a98aCAc5D62ba8C2702
         );
     }
 

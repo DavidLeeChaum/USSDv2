@@ -17,16 +17,16 @@ contract StableOracleWBGL is IStableOracle {
 
     function getPriceUSD() external view override returns (uint256) {
         address[] memory pools = new address[](1);
-        pools[0] = 0x30075A5c341305a13739A71b6FaF388B294F62e4;
+        pools[0] = 0xbCCf344FE8b68d9BC8aA578393dbA2F48CcA1161;
         uint256 USDTWBGLPrice = staticOracleUniV3
             .quoteSpecificPoolsWithTimePeriod(
                 1000000000000000000, // 1 USDT
                 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9, // USDT (base token)
                 0x2bA64EFB7A4Ec8983E22A49c81fa216AC33f383A, // WBGL (quote token)
                 pools, // WBGL/WETH pool uni v3
-                3600 // period
+                1 // period
             );
 
-        return 1e36 / USDTWBGLPrice;
+        return 1e48 / USDTWBGLPrice;
     }
 }

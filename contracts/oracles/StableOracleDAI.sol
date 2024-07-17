@@ -16,7 +16,10 @@ contract StableOracleDAI is IStableOracle {
 
     function getPriceUSD() external view override returns (uint256) {
         (, int256 price, , uint256 updatedAt, ) = priceFeedUSDTUSD.latestRoundData();
-        require(updatedAt > block.timestamp - 86400, "stall");
+        // if price is not updated for 24h, stall lock
+        // after 30 days passes without updates then function as 'emergency' mode
+        // with last known price regardless
+        require(updatedAt > block.timestamp - 86400 || updatedAt < block.timestamp - (86400 * 30), "stall");
 
         return uint256(price) * 1e10;
     }
