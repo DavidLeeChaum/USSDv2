@@ -6,13 +6,14 @@ import { SafeTransferLib } from "solmate/src/utils/SafeTransferLib.sol";
 
 import "./interfaces/IStableOracle.sol";
 import "./interfaces/IUSSDInsurance.sol";
+import "./interfaces/ISStable.sol";
 import "./interfaces/IUSSD.sol";
 
 /**
     @notice Autonomous on-chain Stablecoin
  */
 contract SStable is
-    IUSSD,
+    ISStable,
     ERC20
 {
     //using SafeERC20 for IERC20;
@@ -134,13 +135,13 @@ contract SStable is
              could be called only by staking or insurance contracts
      */
     function mintRewards(
-        uint256 stableCoinAmount,
+        uint256 USDAmount,
         address to
     ) public override {
         require(msg.sender == stakingContract || msg.sender == insuranceContract, "minter");
         require(to != address(0));
 
-        uint256 mintAmount = stableCoinAmount * 1e18 / IStableOracle(ASSET_ORACLE).getPriceUSD();
+        uint256 mintAmount = USDAmount * 1e18 / IStableOracle(ASSET_ORACLE).getPriceUSD();
 
         uint256 founderFee = mintAmount * FOUNDER_FEE / 1e18;
         _mint(to, mintAmount - founderFee);
@@ -254,7 +255,7 @@ contract SStable is
         }
 
         // USD valuation (1e18 based)
-        uint256 valuationToGive = _amount * 1e12 * weight / IStableOracle(ASSET_ORACLE).getPriceUSD();
+        uint256 valuationToGive = _amount * 1e12 * weight * IStableOracle(ASSET_ORACLE).getPriceUSD() / 1e36;
 
         _burn(msg.sender, _amount);
 
@@ -351,5 +352,9 @@ contract SStable is
     */
     function prevSupplyAndCF() override external view returns (uint256, uint256) {
         return (prevSupply, prevCollateralFactor);
+    }
+
+    function getPriceUSD() override external view returns (uint256) {
+        return IStableOracle(ASSET_ORACLE).getPriceUSD();
     }
 }

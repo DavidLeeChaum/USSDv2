@@ -1,10 +1,10 @@
-const SStable = artifacts.require("SStable");
+const BRRL = artifacts.require("BRRL");
 
 const StableOracleWETH = artifacts.require("StableOracleWETH");
 const StableOracleUSSD = artifacts.require("StableOracleUSSD");
 const StableOracleWBGL = artifacts.require("StableOracleWBGL");
 const StableOracleWBTC = artifacts.require("StableOracleWBTC");
-const StableOracleCAD = artifacts.require("StableOracleCAD");
+const StableOracleBRL = artifacts.require("StableOracleBRL");
 
 module.exports = async function (deployer) {
   deployer.then(async () => {
@@ -16,13 +16,12 @@ module.exports = async function (deployer) {
     console.log("StableOracleWBTC was deployed at address " + OWBTC.address);
     const OWBGL = await StableOracleWBGL.deployed();
     console.log("StableOracleWBGL was deployed at address " + OWBGL.address);
-    const OCAD = await StableOracleCAD.deployed();
-    console.log("StableOracleCAD was deployed at address " + OCAD.address);
+    const OBRL = await StableOracleBRL.deployed();
+    console.log("StableOracleBRL was deployed at address " + OBRL.address);
 
-    const CAAD_instance = await deployer.deploy(SStable, "Secure Canadian Dollar", "CAAD", 6);
-    console.log("CAAD deployed at address " + CAAD_instance.address);
+    const BRRL_instance = await deployer.deploy(BRRL, "Brazilian Real Crypto Secured", "BRRL", 6, "0x16e58F04F9ebEd3134cb4d19D48bB810346c1778");
+    console.log("BRRL deployed at address " + BRRL_instance.address);
 
-    await CAAD_instance.setOracles.sendTransaction(OCAD.address, OUSSD.address, OWBGL.address, OWBTC.address, OWETH.address);
-    await GLLD_instance.changeOwner.sendTransaction("0xBF9F500cf8Efc4d2ef395043E5e83D4793028067");
+    await BRRL_instance.setOracles.sendTransaction(OBRL.address, OUSSD.address, OWBGL.address, OWBTC.address, OWETH.address);
   });
 };

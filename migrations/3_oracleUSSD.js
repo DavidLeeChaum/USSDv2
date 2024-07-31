@@ -1,4 +1,4 @@
-const StableOracleUSDT = artifacts.require("StableOracleUSSD");
+const StableOracleUSSD = artifacts.require("StableOracleUSSD");
 
 module.exports = async function (deployer) {
   deployer.then(async () => {

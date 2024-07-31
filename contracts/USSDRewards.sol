@@ -39,7 +39,7 @@ contract USSDRewards is ERC20 {
     }
 
     /// @notice Update the rewards per token accumulator according to the rate, the time elapsed since the last update, and the current total staked amount.
-    function _calculateRewardsPerToken(RewardsPerToken memory rewardsPerTokenIn) internal view returns(RewardsPerToken memory) {
+    function _calculateRewardsPerToken(RewardsPerToken memory rewardsPerTokenIn) virtual internal view returns(RewardsPerToken memory) {
         RewardsPerToken memory rewardsPerTokenOut = RewardsPerToken(rewardsPerTokenIn.accumulated, rewardsPerTokenIn.lastUpdated);
         (uint256 USSDsupply, uint256 cf) = IUSSD(address(USSDToken)).prevSupplyAndCF();
         uint256 totalSupply_ = totalSupply;

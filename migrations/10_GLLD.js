@@ -1,10 +1,10 @@
-const SStable = artifacts.require("SStable");
+const GLLD = artifacts.require("GLLD");
 
 const StableOracleWETH = artifacts.require("StableOracleWETH");
 const StableOracleUSSD = artifacts.require("StableOracleUSSD");
 const StableOracleWBGL = artifacts.require("StableOracleWBGL");
 const StableOracleWBTC = artifacts.require("StableOracleWBTC");
-const StableOracleBRL = artifacts.require("StableOracleBRL");
+const StableOracleXAU = artifacts.require("StableOracleXAU");
 
 module.exports = async function (deployer) {
   deployer.then(async () => {
@@ -16,13 +16,12 @@ module.exports = async function (deployer) {
     console.log("StableOracleWBTC was deployed at address " + OWBTC.address);
     const OWBGL = await StableOracleWBGL.deployed();
     console.log("StableOracleWBGL was deployed at address " + OWBGL.address);
-    const OBRL = await StableOracleBRL.deployed();
-    console.log("StableOracleBRL was deployed at address " + OBRL.address);
+    const OXAU = await StableOracleXAU.deployed();
+    console.log("StableOracleXAU was deployed at address " + OXAU.address);
 
-    const BRRL_instance = await deployer.deploy(SStable, "Secure Real", "BRRL", 6, "0x16e58F04F9ebEd3134cb4d19D48bB810346c1778");
-    console.log("BRRL deployed at address " + BRRL_instance.address);
+    const GLLD_instance = await deployer.deploy(GLLD, "Gold Crypto Secured", "GLLD", 6, "0x0000000000000000000000000000000000000000");
+    console.log("GLLD deployed at address " + GLLD_instance.address);
 
-    await BRRL_instance.setOracles.sendTransaction(OBRL.address, OUSSD.address, OWBGL.address, OWBTC.address, OWETH.address);
-    await GLLD_instance.changeOwner.sendTransaction("0xaA94bd8a27cf96e21552262bac71782dcA67148a");
+    await GLLD_instance.setOracles.sendTransaction(OXAU.address, OUSSD.address, OWBGL.address, OWBTC.address, OWETH.address);
   });
 };
