@@ -56,7 +56,7 @@ contract('stSStable (staked SStable, rewards program)', async function (accounts
     await truffleAssert.reverts(this.SStable.mintForToken(USSD, web3.utils.toBN('1000000'), accounts[1], { from: accounts[0] }), "WBTCorWETH");
     
     await this.SStable.mintForToken(WETH, web3.utils.toBN('10000000000000000'), accounts[1], { from: accounts[0] });
-    console.log("Minted 12.5 USSD for 0.01 WETH");
+    console.log("Minted 12.5 SStable for 0.01 WETH");
 
     expect((await this.SStable.balanceOf(accounts[1])).toString()).to.equal('17500000');
 
@@ -98,43 +98,49 @@ contract('stSStable (staked SStable, rewards program)', async function (accounts
     expect(cmpnum((await this.stSStable.currentUserRewards(accounts[1])).toString(), '10356', 4)).to.be.true;
     
     await this.stSStable.claim(accounts[1], { from: accounts[1] });
-    //expect((await this.SStable.balanceOf(accounts[1])).toString()).to.equal('7510356');
-    expect(cmpnum((await this.SStable.balanceOf(accounts[1])).toString(), '7510356', 6)).to.be.true;
+    expect((await this.SStable.balanceOf(accounts[1])).toString()).to.equal('7505127');
+    expect(cmpnum((await this.SStable.balanceOf(accounts[1])).toString(), '7505127', 6)).to.be.true;
 
     // add second staker
-    /*await this.USSD.transfer(accounts[2], web3.utils.toBN('100000000'), { from: accounts[1] });
-    await this.USSD.approve(this.stUSSD.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[2] });
-    expect((await this.stUSSD.totalSupply()).toString()).to.equal('100000000000000000000');
-    expect((await this.stUSSD.totalAssets()).toString()).to.equal('100000000');
+    await this.SStable.transfer(accounts[2], web3.utils.toBN('5000000'), { from: accounts[1] });
+    await this.SStable.approve(this.stSStable.address, web3.utils.toBN('1000000000000000000000'), { from: accounts[2] });
+    expect((await this.stSStable.totalSupply()).toString()).to.equal('10000000000000000000');
+    expect((await this.stSStable.totalAssets()).toString()).to.equal('10000000');
     await time.advanceBlock();
-    await this.stUSSD.deposit(web3.utils.toBN('100000000'), accounts[2], { from: accounts[2], gas: 5000000 });
-    expect((await this.stUSSD.totalSupply()).toString()).to.equal('200000000000000000000');
-    expect((await this.stUSSD.totalAssets()).toString()).to.equal('200000000');
+    await this.stSStable.deposit(web3.utils.toBN('5000000'), accounts[2], { from: accounts[2], gas: 5000000 });
+    expect((await this.stSStable.totalSupply()).toString()).to.equal('15000000000000000000');
+    expect((await this.stSStable.totalAssets()).toString()).to.equal('15000000');
 
     await time.increase(7 * 24 * 3600); // pass a week
     await time.advanceBlock();
 
-    // each staker gets half
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[1])).toString(), '103561', 3)).to.be.true;
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[2])).toString(), '103561', 3)).to.be.true;
-    await this.stUSSD.claim(accounts[1], { from: accounts[1], gas: 5000000 });
-    expect((await this.stUSSD.currentUserRewards(accounts[1])).toString()).to.equal('0');
-    expect(cmpnum((await this.stUSSD.currentUserRewards(accounts[2])).toString(), '103561', 3)).to.be.true;
-    await this.stUSSD.claim(accounts[2], { from: accounts[2], gas: 5000000 });
-    expect(cmpnum((await this.USSD.balanceOf(accounts[1])).toString(), '150310684', 6)).to.be.true;
-    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '103561', 3)).to.be.true;
+    // each staker gets their part
+    //expect((await this.stSStable.currentUserRewards(accounts[1])).toString()).to.equal('6904');
+    expect(cmpnum((await this.stSStable.currentUserRewards(accounts[1])).toString(), '6904', 3)).to.be.true;
+    //expect((await this.stSStable.currentUserRewards(accounts[2])).toString()).to.equal('3452');
+    expect(cmpnum((await this.stSStable.currentUserRewards(accounts[2])).toString(), '3452', 3)).to.be.true;
     
-    // second staker withdraws
-    expect((await this.stUSSD.balanceOf(accounts[1])).toString()).to.equal('100000000000000000000');
-    await time.advanceBlock();
-    await this.stUSSD.redeem(web3.utils.toBN('50000000000000000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
-    await time.advanceBlock();
-    await this.stUSSD.withdraw(web3.utils.toBN('50000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
-    expect((await this.stUSSD.balanceOf(accounts[2])).toString()).to.equal('0'); // completely unstaked
+    // claim rewards
+    await this.stSStable.claim(accounts[1], { from: accounts[1], gas: 5000000 });
+    expect((await this.stSStable.currentUserRewards(accounts[1])).toString()).to.equal('0');
+    expect(cmpnum((await this.stSStable.currentUserRewards(accounts[2])).toString(), '3452', 3)).to.be.true;
+    await this.stSStable.claim(accounts[2], { from: accounts[2], gas: 5000000 });
+    //expect((await this.SStable.balanceOf(accounts[1])).toString()).to.equal('2512031');
+    expect(cmpnum((await this.SStable.balanceOf(accounts[1])).toString(), '2508545', 5)).to.be.true; // 7.5 - 5 (2nd staker) + claim1 + claim2
+    //expect((await this.SStable.balanceOf(accounts[2])).toString()).to.equal('1709');
+    expect(cmpnum((await this.SStable.balanceOf(accounts[2])).toString(), '1709', 3)).to.be.true; // claim2 only
+    
+    expect(cmpnum((await this.SStable.balanceOf(accounts[0])).toString(), '103', 2)).to.be.true; // fees
 
-    expect((await this.USSD.balanceOf(accounts[2])).toString()).to.equal('100103561');
-    expect(cmpnum((await this.USSD.balanceOf(accounts[2])).toString(), '100103561', 6)).to.be.true;
-    expect(cmpnum((await this.USSD.totalSupply()).toString(), '350414245', 6)).to.be.true;
-    */
+    // second staker withdraws
+    expect((await this.stSStable.balanceOf(accounts[1])).toString()).to.equal('10000000000000000000');
+    await time.advanceBlock();
+    await this.stSStable.redeem(web3.utils.toBN('2500000000000000000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
+    await time.advanceBlock();
+    await this.stSStable.withdraw(web3.utils.toBN('2500000'), accounts[2], accounts[2], { from: accounts[2], gas: 5000000 });
+    expect((await this.stSStable.balanceOf(accounts[2])).toString()).to.equal('0'); // completely unstaked
+
+    expect(cmpnum((await this.SStable.balanceOf(accounts[2])).toString(), '5001709', 6)).to.be.true;
+    expect(cmpnum((await this.SStable.totalSupply()).toString(), '17510356', 6)).to.be.true;
   });
 });
